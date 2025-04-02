@@ -1,6 +1,10 @@
 import mongoose from 'mongoose';
 
 const customerSchema = new mongoose.Schema({
+    _id: {
+        type: String, //UUID string for order ID
+        required: true
+    },
     name: {
         type: String,
         required: true,
@@ -26,7 +30,8 @@ const customerSchema = new mongoose.Schema({
         enum: ['Male', 'Female', 'Other']
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    _id: false
 });
 
 // Create indexes

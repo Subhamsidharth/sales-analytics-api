@@ -1,14 +1,18 @@
 import mongoose from 'mongoose';
 
 const orderSchema = new mongoose.Schema({
+  _id: {             //UUID string for order ID
+    type: String,
+    required: true
+  },
   customerId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: 'Customer',
     required: true
   },
   products: [{
     productId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: 'Product',
       required: true
     },
@@ -36,11 +40,12 @@ const orderSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    enum: ['pending', 'processing', 'completed', 'cancelled'],
+    enum: ['pending', 'completed', 'canceled'],
     default: 'pending'
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  _id: false
 });
 
 orderSchema.index({ customerId: 1 });

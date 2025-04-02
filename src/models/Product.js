@@ -1,6 +1,10 @@
 import mongoose from 'mongoose';
 
 const productSchema = new mongoose.Schema({
+  _id: {
+    type: String, // Use String for UUID consistency
+    required: true
+  },
   name: {
     type: String,
     required: true,
@@ -29,5 +33,4 @@ productSchema.index({ category: 1 });
 productSchema.index({ name: 1 });
 
 const Product = mongoose.model('Product', productSchema);
-
 export default Product;
