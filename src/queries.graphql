@@ -86,11 +86,11 @@ mutation PlaceOrder($input: PlaceOrderInput!) {
 #     "customerId": "fbcfbac1-7731-4076-8e19-eef4717da14b",
 #     "products": [
 #       {
-#         "productId": "508220fc-2f77-414e-b9d6-120be0fca340", 
+#         "productId": "508220fc-2f77-414e-b9d6-120be0fca340",
 #         "quantity": 2
 #       },
 #       {
-#         "productId": "34fad6ef-d906-44ce-ae7a-44453282b0e9", 
+#         "productId": "34fad6ef-d906-44ce-ae7a-44453282b0e9",
 #         "quantity": 1
 #       }
 #     ]

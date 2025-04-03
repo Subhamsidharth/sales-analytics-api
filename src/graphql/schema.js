@@ -10,7 +10,6 @@ import productResolvers from './resolvers/productResolvers.js';
 import orderResolvers from './resolvers/orderResolvers.js';
 import analyticsResolvers from './resolvers/analyticsResolvers.js';
 
-
 const baseTypeDefs = `#graphql
   type Query {
     _empty: String
@@ -27,24 +26,24 @@ const typeDefs = [
   customerTypeDefs,
   productTypeDefs,
   orderTypeDefs,
-  analyticsTypeDefs
+  analyticsTypeDefs,
 ];
 
 // Merge all resolvers
 const resolvers = {
   Query: {
-    _empty: () => '',  // Placeholder resolver for base type
+    _empty: () => '', // Placeholder resolver for base type
     ...(customerResolvers.Query || {}),
     ...(productResolvers.Query || {}),
     ...(orderResolvers.Query || {}),
-    ...(analyticsResolvers.Query || {})
+    ...(analyticsResolvers.Query || {}),
   },
   Mutation: {
-    _empty: () => '',  // Placeholder resolver for base type
+    _empty: () => '', // Placeholder resolver for base type
     ...(customerResolvers.Mutation || {}),
     ...(productResolvers.Mutation || {}),
     ...(orderResolvers.Mutation || {}),
-    ...(analyticsResolvers.Mutation || {})
+    ...(analyticsResolvers.Mutation || {}),
   },
   // Include any custom scalar resolvers or type resolvers here
 };

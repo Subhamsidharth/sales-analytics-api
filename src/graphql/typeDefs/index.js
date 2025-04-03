@@ -14,12 +14,6 @@ const baseTypeDefs = gql`
   }
 `;
 
-const typeDefs = [
-  baseTypeDefs,
-  customerTypes,
-  productTypes,
-  orderTypes,
-  analyticsTypes
-];
+const typeDefs = [baseTypeDefs, customerTypes, productTypes, orderTypes, analyticsTypes];
 
 export default typeDefs;

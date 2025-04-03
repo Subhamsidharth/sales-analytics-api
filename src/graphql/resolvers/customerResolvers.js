@@ -25,11 +25,11 @@ const customerResolvers = {
 
     getCustomerSpending: async (_, { customerId }) => {
       try {
-        // Input validation 
+        // Input validation
         if (!customerId) {
           throw new Error('Customer ID is required');
         }
-        
+
         logger.info(`Calculating spending for customer: ${customerId}`);
 
         const result = await Order.aggregate([
@@ -37,52 +37,56 @@ const customerResolvers = {
           {
             $match: {
               customerId: safeUUID(customerId),
-              status: "completed"
-            }
+              status: 'completed',
+            },
           },
           // Group and calculate metrics
           {
             $group: {
-              _id: "$customerId",
-              totalSpent: { $sum: "$totalAmount" },
+              _id: '$customerId',
+              totalSpent: { $sum: '$totalAmount' },
               orderCount: { $sum: 1 },
-              lastOrderDate: { $max: "$orderDate" }
-            }
+              lastOrderDate: { $max: '$orderDate' },
+            },
           },
           // Format the output
           {
             $project: {
               _id: 0,
-              customerId: "$_id",
-              totalSpent: { $round: ["$totalSpent", 2] }, // Round to 2 decimal places
+              customerId: '$_id',
+              totalSpent: { $round: ['$totalSpent', 2] }, // Round to 2 decimal places
               averageOrderValue: {
                 $round: [
-                  { $cond: [
-                    { $eq: ["$orderCount", 0] },
-                    0,
-                    { $divide: ["$totalSpent", "$orderCount"] }
-                  ]}, 
-                  2
-                ]
+                  {
+                    $cond: [
+                      { $eq: ['$orderCount', 0] },
+                      0,
+                      { $divide: ['$totalSpent', '$orderCount'] },
+                    ],
+                  },
+                  2,
+                ],
               },
-              lastOrderDate: 1
-            }
-          }
+              lastOrderDate: 1,
+            },
+          },
         ]);
 
         // If no orders found, return default structure
-        return result[0] || {
-          customerId,
-          totalSpent: 0,
-          averageOrderValue: 0,
-          lastOrderDate: null
-        };
+        return (
+          result[0] || {
+            customerId,
+            totalSpent: 0,
+            averageOrderValue: 0,
+            lastOrderDate: null,
+          }
+        );
       } catch (error) {
         logger.error(`Error in getCustomerSpending: ${error.message}`);
         throw new Error(`Failed to process customer spending data: ${error.message}`);
       }
-    }
-  }
+    },
+  },
 };
 
 export default customerResolvers;

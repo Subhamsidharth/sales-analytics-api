@@ -9,7 +9,7 @@ const resolvers = mergeResolvers([
   customerResolvers,
   productResolvers,
   orderResolvers,
-  analyticsResolvers
+  analyticsResolvers,
 ]);
 
 export default resolvers;

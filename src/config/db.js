@@ -10,8 +10,8 @@ const dbConfig = {
     maxPoolSize: 10,
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
-    family: 4
-  }
+    family: 4,
+  },
 };
 
 // Monitor mongoose connection events
@@ -52,7 +52,7 @@ const logDBError = (error) => {
     timestamp: new Date().toISOString(),
     error: error.message,
     stack: error.stack,
-    code: error.code
+    code: error.code,
   });
 };
 
@@ -67,7 +67,7 @@ const connectWithRetry = async (retryCount = 0) => {
   } catch (err) {
     if (retryCount < MAX_RETRIES) {
       console.log(`Retrying database connection... Attempt ${retryCount + 1}/${MAX_RETRIES}`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
+      await new Promise((resolve) => setTimeout(resolve, RETRY_INTERVAL));
       return connectWithRetry(retryCount + 1);
     }
     logDBError(err);
@@ -80,7 +80,7 @@ const connectDB = async () => {
   try {
     // Set up mongoose debug mode if needed
     if (process.env.NODE_ENV === 'development') {
-      mongoose.set('debug', false);  // set true for debug
+      mongoose.set('debug', false); // set true for debug
     }
 
     // Initialize connection event handlers
