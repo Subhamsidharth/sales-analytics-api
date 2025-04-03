@@ -72,7 +72,7 @@ A GraphQL API built with Node.js, Express, and MongoDB for tracking and analyzin
    The GraphQL API will be available at `http://localhost:7008/graphql`  
 
 ## Project Structure  
-
+```plaintext
 project-root/
 ├── src/
 |   |-- config/
