@@ -106,7 +106,7 @@ project-root/
 ├── .gitignore
 ├── package.json
 └── README.md
-
+```
 ## API Endpoints  
 
 ### GraphQL Endpoint  
