@@ -253,5 +253,3 @@ mutation PlaceOrder($input: PlaceOrderInput!) {
 
 - **MongoDB** for its flexible NoSQL capabilities.
 - **Apollo Server** for a seamless GraphQL implementation.
-
-```
