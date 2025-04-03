@@ -1,40 +1,45 @@
 import mongoose from 'mongoose';
+import { UUID } from 'bson';
 
-const orderSchema = new mongoose.Schema({
-  _id: {             //UUID string for order ID
+const orderProductSchema = new mongoose.Schema({
+  productId: {
     type: String,
     required: true
   },
-  customerId: {
-    type: String,
-    ref: 'Customer',
-    required: true
+  quantity: {
+    type: Number,
+    required: true,
+    min: 1
   },
-  products: [{
-    productId: {
-      type: String,
-      ref: 'Product',
-      required: true
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1
-    },
-    priceAtPurchase: {
-      type: Number,
-      required: true,
-      min: 0
-    }
-  }],
-  totalAmount: {
+  priceAtPurchase: {
     type: Number,
     required: true,
     min: 0
+  }
+});
+
+const orderSchema = new mongoose.Schema({
+  _id: {
+    type: 'object',
+    value: { type: 'Binary' },
+    default: () => new UUID()
+  },
+  customerId: {
+    type: 'object',
+    value: { type: 'Binary' },
+    required: true
+  },
+  products: {
+    type: [orderProductSchema],
+    required: true,
+    validate: [arr => arr.length > 0, 'Order must contain at least one product']
+  },
+  totalAmount: {
+    type: Number,
+    required: true
   },
   orderDate: {
     type: Date,
-    required: true,
     default: Date.now
   },
   status: {
@@ -48,11 +53,10 @@ const orderSchema = new mongoose.Schema({
   _id: false
 });
 
+// Create indexes for frequently queried fields
 orderSchema.index({ customerId: 1 });
 orderSchema.index({ orderDate: 1 });
 orderSchema.index({ status: 1 });
-orderSchema.index({ 'products.productId': 1 });
 
 const Order = mongoose.model('Order', orderSchema);
-
 export default Order;

@@ -1,9 +1,11 @@
 import mongoose from 'mongoose';
+import { UUID } from 'bson';
 
 const productSchema = new mongoose.Schema({
   _id: {
-    type: String, // Use String for UUID consistency
-    required: true
+    type: 'object',
+    value: { type: 'Binary' },
+    default: () => new UUID()
   },
   name: {
     type: String,
@@ -23,12 +25,12 @@ const productSchema = new mongoose.Schema({
   stock: {
     type: Number,
     required: true,
+    default: 0,
     min: 0
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true })
 
+// Create indexes for common queries
 productSchema.index({ category: 1 });
 productSchema.index({ name: 1 });
 

@@ -1,9 +1,11 @@
 import mongoose from 'mongoose';
+import { UUID } from 'bson';
 
 const customerSchema = new mongoose.Schema({
     _id: {
-        type: String, //UUID string for order ID
-        required: true
+        type: 'object',
+        value: { type: 'Binary' },
+        default: () => new UUID()
     },
     name: {
         type: String,
@@ -34,9 +36,8 @@ const customerSchema = new mongoose.Schema({
     _id: false
 });
 
-// Create indexes
+// Create index on email for faster lookups
 customerSchema.index({ email: 1 }, { unique: true });
 
 const Customer = mongoose.model('Customer', customerSchema);
-
 export default Customer;
