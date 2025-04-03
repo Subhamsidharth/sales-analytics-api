@@ -204,246 +204,255 @@ const resolvers = {
       ]);
     },
 
-    getSalesAnalytics: async (_, { startDate, endDate }) => {
-      try {
-        // Convert string dates to Date objects
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        
-        logger.info(`Analyzing sales from ${start} to ${end}`);
-        
-        // Step 1: Get total revenue and order count
-        const overallStats = await Order.aggregate([
-          {
-            $match: {
-              status: "completed"
-              // Temporarily remove date filtering to see if we get results
-            }
-          },
-          {
-            $group: {
-              _id: null,
-              totalRevenue: { $sum: "$totalAmount" },
-              completedOrders: { $sum: 1 }
-            }
-          }
-        ]);
-        
-        // Step 2: Get category breakdown
-        const categoryStats = await Order.aggregate([
-          {
-            $match: {
-              status: "completed"
-              // Temporarily remove date filtering
-            }
-          },
-          { $unwind: "$products" },
-          {
-            $project: {
-              productId: "$products.productId",
-              revenue: { $multiply: ["$products.quantity", "$products.priceAtPurchase"] }
-            }
-          }
-        ]);
-        
-        // Log the raw results for debugging
-        logger.info(`Found ${categoryStats.length} product entries in orders`);
-        if (categoryStats.length > 0) {
-          logger.info(`Sample product ID: ${categoryStats[0].productId}`);
-        }
-        
-        // Get all products for manual joining
-        const allProducts = await Product.find();
-        const productMap = new Map();
-        
-        allProducts.forEach(product => {
-          // Store both string and binary ID versions for matching
-          const stringId = product._id.toString();
-          productMap.set(stringId, product);
-          
-          // Also try storing without dashes if that's how they're represented in orders
-          const noDashesId = stringId.replace(/-/g, '');
-          productMap.set(noDashesId, product);
-        });
-        
-        logger.info(`Loaded ${allProducts.length} products for mapping`);
-        
-        // Manually build category revenue
-        const categoryRevenue = {};
-        let matchCount = 0;
-        
-        for (const item of categoryStats) {
-          const product = productMap.get(item.productId);
-          if (product) {
-            matchCount++;
-            const category = product.category || 'Uncategorized';
-            categoryRevenue[category] = (categoryRevenue[category] || 0) + item.revenue;
-          }
-        }
-        
-        logger.info(`Matched ${matchCount} products with categories`);
-        
-        // Format category breakdown
-        const categoryBreakdown = Object.entries(categoryRevenue).map(([category, revenue]) => ({
-          category,
-          revenue: Number(revenue.toFixed(2))
-        })).sort((a, b) => b.revenue - a.revenue);
-        
-        // Final response
-        return {
-          totalRevenue: overallStats.length > 0 ? overallStats[0].totalRevenue : 0,
-          completedOrders: overallStats.length > 0 ? overallStats[0].completedOrders : 0,
-          categoryBreakdown
-        };
-      } catch (error) {
-        logger.error(`Error in getSalesAnalytics: ${error.message}`);
-        throw new Error(`Failed to analyze sales data: ${error.message}`);
-      }
-    }
-
     // getSalesAnalytics: async (_, { startDate, endDate }) => {
     //   try {
     //     // Convert string dates to Date objects
     //     const start = new Date(startDate);
     //     const end = new Date(endDate);
         
-    //     // Validate date inputs
-    //     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-    //       throw new Error('Invalid date format. Please use ISO format (YYYY-MM-DDTHH:mm:ssZ)');
-    //     }
+    //     logger.info(`Analyzing sales from ${start} to ${end}`);
         
-    //     logger.info(`Analyzing sales from ${startDate} to ${endDate}`);
-    //     logger.info(`Parsed dates - Start: ${start.toISOString()}, End: ${end.toISOString()}`);
-        
-    //     // Based on debug information, try a corrected aggregation
-    //     const correctedResult = await Order.aggregate([
-    //       // Filter orders with completed status
+    //     // Step 1: Get total revenue and order count
+    //     const overallStats = await Order.aggregate([
     //       {
     //         $match: {
-    //           status: "completed"
+    //           status: "completed",
+    //           orderDate: {
+    //             $gte: start.toISOString().slice(0, 23), // Trim to milliseconds
+    //             $lte: end.toISOString().slice(0, 23)
+    //           }
     //         }
     //       },
-          
-    //       // Calculate overall statistics
     //       {
-    //         $facet: {
-    //           // Total stats
-    //           "overall": [
-    //             {
-    //               $group: {
-    //                 _id: null,
-    //                 totalRevenue: { $sum: "$totalAmount" },
-    //                 completedOrders: { $sum: 1 }
-    //               }
-    //             }
-    //           ],
-              
-    //           // For category breakdown
-    //           "products": [
-    //             // Unwind the products array
-    //             { $unwind: "$products" },
-                
-    //             // Calculate revenue per product
-    //             {
-    //               $project: {
-    //                 productId: "$products.productId",
-    //                 productRevenue: { 
-    //                   $multiply: ["$products.quantity", "$products.priceAtPurchase"] 
-    //                 }
-    //               }
-    //             },
-                
-    //             // Join with the products collection
-    //             {
-    //               $lookup: {
-    //                 from: "products",
-    //                 let: { productId: "$productId" },
-    //                 pipeline: [
-    //                   {
-    //                     $match: {
-    //                       $expr: {
-    //                         $eq: [
-    //                           { $toString: "$_id" },
-    //                           "$$productId"
-    //                         ]
-    //                       }
-    //                     }
-    //                   }
-    //                 ],
-    //                 as: "productDetails"
-    //               }
-    //             },
-                
-    //             // Filter out products that didn't match
-    //             {
-    //               $match: {
-    //                 "productDetails.0": { $exists: true }
-    //               }
-    //             },
-                
-    //             // Extract the matched product
-    //             {
-    //               $addFields: {
-    //                 productDetail: { $arrayElemAt: ["$productDetails", 0] }
-    //               }
-    //             },
-                
-    //             // Group by category
-    //             {
-    //               $group: {
-    //                 _id: "$productDetail.category",
-    //                 revenue: { $sum: "$productRevenue" }
-    //               }
-    //             },
-                
-    //             // Format output
-    //             {
-    //               $project: {
-    //                 _id: 0,
-    //                 category: "$_id",
-    //                 revenue: { $round: ["$revenue", 2] }
-    //               }
-    //             },
-                
-    //             // Sort by revenue
-    //             { $sort: { revenue: -1 } }
-    //           ]
+    //         $group: {
+    //           _id: null,
+    //           totalRevenue: { $sum: "$totalAmount" },
+    //           completedOrders: { $sum: 1 }
+    //         }
+    //       }
+    //     ]);
+    //     // Step 2: Get category breakdown
+    //     const categoryStats = await Order.aggregate([
+    //       {
+    //         $match: {
+    //           status: "completed",
+    //           orderDate: {
+    //             $gte: start.toISOString().slice(0, 23), // Trim to milliseconds
+    //             $lte: end.toISOString().slice(0, 23)
+    //           }
     //         }
     //       },
-          
-    //       // Final output format
+    //       { $unwind: "$products" },
     //       {
     //         $project: {
-    //           totalRevenue: { 
-    //             $ifNull: [{ $arrayElemAt: ["$overall.totalRevenue", 0] }, 0] 
-    //           },
-    //           completedOrders: { 
-    //             $ifNull: [{ $arrayElemAt: ["$overall.completedOrders", 0] }, 0] 
-    //           },
-    //           categoryBreakdown: { 
-    //             $ifNull: ["$products", []] 
-    //           }
+    //           productId: "$products.productId",
+    //           revenue: { $multiply: ["$products.quantity", "$products.priceAtPurchase"] }
     //         }
     //       }
     //     ]);
         
-    //     logger.info(`Corrected aggregation results: ${JSON.stringify(correctedResult)}`);
-        
-    //     // Handle case with no results
-    //     if (!correctedResult.length) {
-    //       return {
-    //         totalRevenue: 0,
-    //         completedOrders: 0,
-    //         categoryBreakdown: []
-    //       };
+    //     // Log the raw results for debugging
+    //     logger.info(`Found ${categoryStats.length} product entries in orders`);
+    //     if (categoryStats.length > 0) {
+    //       logger.info(`Sample product ID: ${categoryStats[0].productId}`);
     //     }
         
-    //     return correctedResult[0];
+    //     // Get all products for manual joining
+    //     const allProducts = await Product.find();
+    //     const productMap = new Map();
+        
+    //     allProducts.forEach(product => {
+    //       // Store both string and binary ID versions for matching
+    //       const stringId = product._id.toString();
+    //       productMap.set(stringId, product);
+          
+    //       // Also try storing without dashes if that's how they're represented in orders
+    //       const noDashesId = stringId.replace(/-/g, '');
+    //       productMap.set(noDashesId, product);
+    //     });
+        
+    //     logger.info(`Loaded ${allProducts.length} products for mapping`);
+        
+    //     // Manually build category revenue
+    //     const categoryRevenue = {};
+    //     let matchCount = 0;
+        
+    //     for (const item of categoryStats) {
+    //       const product = productMap.get(item.productId);
+    //       if (product) {
+    //         matchCount++;
+    //         const category = product.category || 'Uncategorized';
+    //         categoryRevenue[category] = (categoryRevenue[category] || 0) + item.revenue;
+    //       }
+    //     }
+        
+    //     logger.info(`Matched ${matchCount} products with categories`);
+        
+    //     // Format category breakdown
+    //     const categoryBreakdown = Object.entries(categoryRevenue).map(([category, revenue]) => ({
+    //       category,
+    //       revenue: Number(revenue.toFixed(2))
+    //     })).sort((a, b) => b.revenue - a.revenue);
+        
+    //     // Final response
+    //     return {
+    //       totalRevenue: overallStats.length > 0 ? overallStats[0].totalRevenue : 0,
+    //       completedOrders: overallStats.length > 0 ? overallStats[0].completedOrders : 0,
+    //       categoryBreakdown
+    //     };
     //   } catch (error) {
     //     logger.error(`Error in getSalesAnalytics: ${error.message}`);
     //     throw new Error(`Failed to analyze sales data: ${error.message}`);
     //   }
     // }
+
+    getSalesAnalytics: async (_, { startDate, endDate }) => {
+      try {
+        // Convert string dates to Date objects
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        // Validate date inputs
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+          throw new Error('Invalid date format. Please use ISO format (YYYY-MM-DDTHH:mm:ssZ)');
+        }
+        
+        logger.info(`Analyzing sales from ${startDate} to ${endDate}`);
+        logger.info(`Parsed dates - Start: ${start.toISOString()}, End: ${end.toISOString()}`);
+        
+        // Based on debug information, try a corrected aggregation
+        const correctedResult = await Order.aggregate([
+          // Filter orders with completed status
+          {
+            $match: {
+              status: "completed",
+              orderDate: {
+                $gte: start.toISOString().slice(0, 23), // Trim to milliseconds
+                $lte: end.toISOString().slice(0, 23)
+              }
+            }
+          },
+          
+          // Calculate overall statistics
+          {
+            $facet: {
+              // Total stats
+              "overall": [
+                {
+                  $group: {
+                    _id: null,
+                    totalRevenue: { $sum: "$totalAmount" },
+                    completedOrders: { $sum: 1 }
+                  }
+                }
+              ],
+              
+              // For category breakdown
+              "products": [
+                // Unwind the products array
+                { $unwind: "$products" },
+                
+                // Calculate revenue per product
+                {
+                  $project: {
+                    productId: "$products.productId",
+                    productRevenue: { 
+                      $multiply: ["$products.quantity", "$products.priceAtPurchase"] 
+                    }
+                  }
+                },
+                
+                // Join with the products collection
+                {
+                  $lookup: {
+                    from: "products",
+                    let: { productId: "$productId" },
+                    pipeline: [
+                      {
+                        $match: {
+                          $expr: {
+                            $eq: [
+                              { $toString: "$_id" },
+                              "$$productId"
+                            ]
+                          }
+                        }
+                      }
+                    ],
+                    as: "productDetails"
+                  }
+                },
+                
+                // Filter out products that didn't match
+                {
+                  $match: {
+                    "productDetails.0": { $exists: true }
+                  }
+                },
+                
+                // Extract the matched product
+                {
+                  $addFields: {
+                    productDetail: { $arrayElemAt: ["$productDetails", 0] }
+                  }
+                },
+                
+                // Group by category
+                {
+                  $group: {
+                    _id: "$productDetail.category",
+                    revenue: { $sum: "$productRevenue" }
+                  }
+                },
+                
+                // Format output
+                {
+                  $project: {
+                    _id: 0,
+                    category: "$_id",
+                    revenue: { $round: ["$revenue", 2] }
+                  }
+                },
+                
+                // Sort by revenue
+                { $sort: { revenue: -1 } }
+              ]
+            }
+          },
+          
+          // Final output format
+          {
+            $project: {
+              totalRevenue: { 
+                $ifNull: [{ $arrayElemAt: ["$overall.totalRevenue", 0] }, 0] 
+              },
+              completedOrders: { 
+                $ifNull: [{ $arrayElemAt: ["$overall.completedOrders", 0] }, 0] 
+              },
+              categoryBreakdown: { 
+                $ifNull: ["$products", []] 
+              }
+            }
+          }
+        ]);
+        
+        logger.info(`Corrected aggregation results: ${JSON.stringify(correctedResult)}`);
+        
+        // Handle case with no results
+        if (!correctedResult.length) {
+          return {
+            totalRevenue: 0,
+            completedOrders: 0,
+            categoryBreakdown: []
+          };
+        }
+        
+        return correctedResult[0];
+      } catch (error) {
+        logger.error(`Error in getSalesAnalytics: ${error.message}`);
+        throw new Error(`Failed to analyze sales data: ${error.message}`);
+      }
+    }
   },
 
   Mutation: {
