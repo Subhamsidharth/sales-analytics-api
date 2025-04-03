@@ -28,7 +28,7 @@ const productSchema = new mongoose.Schema({
     default: 0,
     min: 0
   }
-}, { timestamps: true })
+}, { timestamps: true, _id: false })
 
 // Create indexes for common queries
 productSchema.index({ category: 1 });

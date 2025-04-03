@@ -6,16 +6,10 @@ import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4'; 
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 import logger from './utils/logger.js';
-import typeDefs from './schema/typeDefs.js';
-import resolvers from './schema/resolvers.js';
-import config from './config/indexConfig.js';
+import schema from './graphql/schema.js';
 import connectDB from './config/db.js';
-
-// Load environment variables
-dotenv.config();
-
+import config from './config/indexConfig.js';
 
 async function startServer() {
   // Connect to database
@@ -40,8 +34,7 @@ async function startServer() {
   
   // Create Apollo Server
   const server = new ApolloServer({
-    typeDefs,
-    resolvers,
+    ...schema,
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
     ],
