@@ -209,9 +209,9 @@ const resolvers = {
     //     // Convert string dates to Date objects
     //     const start = new Date(startDate);
     //     const end = new Date(endDate);
-        
+
     //     logger.info(`Analyzing sales from ${start} to ${end}`);
-        
+
     //     // Step 1: Get total revenue and order count
     //     const overallStats = await Order.aggregate([
     //       {
@@ -250,33 +250,33 @@ const resolvers = {
     //         }
     //       }
     //     ]);
-        
+
     //     // Log the raw results for debugging
     //     logger.info(`Found ${categoryStats.length} product entries in orders`);
     //     if (categoryStats.length > 0) {
     //       logger.info(`Sample product ID: ${categoryStats[0].productId}`);
     //     }
-        
+
     //     // Get all products for manual joining
     //     const allProducts = await Product.find();
     //     const productMap = new Map();
-        
+
     //     allProducts.forEach(product => {
     //       // Store both string and binary ID versions for matching
     //       const stringId = product._id.toString();
     //       productMap.set(stringId, product);
-          
+
     //       // Also try storing without dashes if that's how they're represented in orders
     //       const noDashesId = stringId.replace(/-/g, '');
     //       productMap.set(noDashesId, product);
     //     });
-        
+
     //     logger.info(`Loaded ${allProducts.length} products for mapping`);
-        
+
     //     // Manually build category revenue
     //     const categoryRevenue = {};
     //     let matchCount = 0;
-        
+
     //     for (const item of categoryStats) {
     //       const product = productMap.get(item.productId);
     //       if (product) {
@@ -285,15 +285,15 @@ const resolvers = {
     //         categoryRevenue[category] = (categoryRevenue[category] || 0) + item.revenue;
     //       }
     //     }
-        
+
     //     logger.info(`Matched ${matchCount} products with categories`);
-        
+
     //     // Format category breakdown
     //     const categoryBreakdown = Object.entries(categoryRevenue).map(([category, revenue]) => ({
     //       category,
     //       revenue: Number(revenue.toFixed(2))
     //     })).sort((a, b) => b.revenue - a.revenue);
-        
+
     //     // Final response
     //     return {
     //       totalRevenue: overallStats.length > 0 ? overallStats[0].totalRevenue : 0,
@@ -311,15 +311,15 @@ const resolvers = {
         // Convert string dates to Date objects
         const start = new Date(startDate);
         const end = new Date(endDate);
-        
+
         // Validate date inputs
         if (isNaN(start.getTime()) || isNaN(end.getTime())) {
           throw new Error('Invalid date format. Please use ISO format (YYYY-MM-DDTHH:mm:ssZ)');
         }
-        
+
         logger.info(`Analyzing sales from ${startDate} to ${endDate}`);
         logger.info(`Parsed dates - Start: ${start.toISOString()}, End: ${end.toISOString()}`);
-        
+
         // Based on debug information, try a corrected aggregation
         const correctedResult = await Order.aggregate([
           // Filter orders with completed status
@@ -332,7 +332,7 @@ const resolvers = {
               }
             }
           },
-          
+
           // Calculate overall statistics
           {
             $facet: {
@@ -346,22 +346,22 @@ const resolvers = {
                   }
                 }
               ],
-              
+
               // For category breakdown
               "products": [
                 // Unwind the products array
                 { $unwind: "$products" },
-                
+
                 // Calculate revenue per product
                 {
                   $project: {
                     productId: "$products.productId",
-                    productRevenue: { 
-                      $multiply: ["$products.quantity", "$products.priceAtPurchase"] 
+                    productRevenue: {
+                      $multiply: ["$products.quantity", "$products.priceAtPurchase"]
                     }
                   }
                 },
-                
+
                 // Join with the products collection
                 {
                   $lookup: {
@@ -382,21 +382,21 @@ const resolvers = {
                     as: "productDetails"
                   }
                 },
-                
+
                 // Filter out products that didn't match
                 {
                   $match: {
                     "productDetails.0": { $exists: true }
                   }
                 },
-                
+
                 // Extract the matched product
                 {
                   $addFields: {
                     productDetail: { $arrayElemAt: ["$productDetails", 0] }
                   }
                 },
-                
+
                 // Group by category
                 {
                   $group: {
@@ -404,7 +404,7 @@ const resolvers = {
                     revenue: { $sum: "$productRevenue" }
                   }
                 },
-                
+
                 // Format output
                 {
                   $project: {
@@ -413,31 +413,31 @@ const resolvers = {
                     revenue: { $round: ["$revenue", 2] }
                   }
                 },
-                
+
                 // Sort by revenue
                 { $sort: { revenue: -1 } }
               ]
             }
           },
-          
+
           // Final output format
           {
             $project: {
-              totalRevenue: { 
-                $ifNull: [{ $arrayElemAt: ["$overall.totalRevenue", 0] }, 0] 
+              totalRevenue: {
+                $ifNull: [{ $arrayElemAt: ["$overall.totalRevenue", 0] }, 0]
               },
-              completedOrders: { 
-                $ifNull: [{ $arrayElemAt: ["$overall.completedOrders", 0] }, 0] 
+              completedOrders: {
+                $ifNull: [{ $arrayElemAt: ["$overall.completedOrders", 0] }, 0]
               },
-              categoryBreakdown: { 
-                $ifNull: ["$products", []] 
+              categoryBreakdown: {
+                $ifNull: ["$products", []]
               }
             }
           }
         ]);
-        
+
         logger.info(`Corrected aggregation results: ${JSON.stringify(correctedResult)}`);
-        
+
         // Handle case with no results
         if (!correctedResult.length) {
           return {
@@ -446,7 +446,7 @@ const resolvers = {
             categoryBreakdown: []
           };
         }
-        
+
         return correctedResult[0];
       } catch (error) {
         logger.error(`Error in getSalesAnalytics: ${error.message}`);
@@ -461,54 +461,48 @@ const resolvers = {
       const session = await mongoose.startSession();
 
       try {
-        session.startTransaction();
+        return await session.withTransaction(async () => {
+          // Step 1: Verify customer exists
+          const customer = await Customer.findOne({ _id: new UUID(customerId) }).session(session);
+          if (!customer) throw new Error(`Customer ${customerId} not found`);
 
-        // Verify customer exists
-        const customer = await Customer.findOne({ _id: customerId }).session(session);
-        if (!customer) throw new Error(`Customer ${customerId} not found`);
+          // Step 2: Process products & Validate stock
+          const orderProducts = [];
+          let totalAmount = 0;
 
-        // Process products
-        const orderProducts = [];
-        let totalAmount = 0;
+          for (const item of products) {
+            const product = await Product.findOneAndUpdate(
+              { _id: new UUID(item.productId), stock: { $gte: item.quantity } }, // Ensure stock is available
+              { $inc: { stock: -item.quantity } },
+              { session, new: true } // Returns updated document
+            );
 
-        for (const item of products) {
-          const product = await Product.findOne({ _id: item.productId }).session(session);
-          if (!product) throw new Error(`Product ${item.productId} not found`);
-          if (product.stock < item.quantity) {
-            throw new Error(`Insufficient stock for ${product.name}`);
+            if (!product) throw new Error(`Insufficient stock or product not found: ${item.productId}`);
+
+            orderProducts.push({
+              productId: product._id,
+              quantity: item.quantity,
+              priceAtPurchase: product.price
+            });
+
+            totalAmount += product.price * item.quantity;
           }
 
-          // Update stock
-          await Product.findOneAndUpdate(
-            { _id: item.productId },
-            { $inc: { stock: -item.quantity } },
-            { session }
-          );
-
-          orderProducts.push({
-            productId: product._id,
-            quantity: item.quantity,
-            priceAtPurchase: product.price
+          // Step 3: Create Order
+          const order = new Order({
+            _id: uuidv4(),
+            customerId,
+            products: orderProducts,
+            totalAmount,
+            status: 'pending',
+            orderDate: new Date().toISOString()
           });
 
-          totalAmount += product.price * item.quantity;
-        }
+          await order.save({ session });
 
-        // Create order
-        const order = new Order({
-          _id: uuidv4(),
-          customerId,
-          products: orderProducts,
-          totalAmount,
-          status: 'pending'
+          return order; // This will be returned when the transaction commits
         });
-
-        await order.save({ session });
-        await session.commitTransaction();
-
-        return order;
       } catch (error) {
-        await session.abortTransaction();
         logger.error(`Order failed: ${error.message}`);
         throw new Error(`Order processing failed: ${error.message}`);
       } finally {
